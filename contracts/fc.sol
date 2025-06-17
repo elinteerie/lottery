@@ -3,36 +3,37 @@ pragma solidity ^0.8.19;
 
 contract WalletDistributor {
     // Mapping from owner to (sub-wallet => percentage)
-    mapping(address => mapping(address => uint256)) public distributions;
+    mapping(address => mapping(address => uint256)) private distributions;
 
     // owner => list of sub-wallets
-    mapping(address => address[]) public subWallets;
+    mapping(address => address[]) private subWallets;
 
     // owner => total assigned percentage
-    mapping(address => uint256) public totalPercentage;
+    mapping(address => uint256) private totalPercentage;
 
     // owner => amount to share
-    mapping(address => uint256) public amountToShare;
+    mapping(address => uint256) private amountToShare;
 
     // owner => distribution time (UNIX timestamp)
-    mapping(address => uint256) public distributionTimestamp;
+    mapping(address => uint256) private distributionTimestamp;
 
     // Set percentage distribution for sub-wallets
-    function setDistribution(address owner, address wallet, uint256 percentage) public {
-        uint256 current = distributions[owner][wallet];
+    function setDistribution(address wallet, uint256 percentage) public {
+    address owner = msg.sender;
+    uint256 current = distributions[owner][wallet];
 
-        require(
-            totalPercentage[owner] - current + percentage <= 100,
-            "Total percentage cannot exceed 100"
-        );
+    require(
+        totalPercentage[owner] - current + percentage <= 100,
+        "Total percentage cannot exceed 100"
+    );
 
-        if (current == 0 && percentage > 0) {
-            subWallets[owner].push(wallet);
-        }
-
-        totalPercentage[owner] = totalPercentage[owner] - current + percentage;
-        distributions[owner][wallet] = percentage;
+    if (current == 0 && percentage > 0) {
+        subWallets[owner].push(wallet);
     }
+
+    totalPercentage[owner] = totalPercentage[owner] - current + percentage;
+    distributions[owner][wallet] = percentage;
+}
 
     // Owner sets the amount they want to share
     function setAmountToShare() external payable {
@@ -92,7 +93,8 @@ contract WalletDistributor {
     }
 
     // Check if the owner's total percentage equals 100
-    function isValidDistribution(address owner) public view returns (bool) {
+    function isValidDistribution() public view returns (bool) {
+        address owner = msg.sender;
         return totalPercentage[owner] == 100;
     }
 }
