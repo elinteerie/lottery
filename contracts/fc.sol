@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
+
+import "@coti-io/coti-contracts/contracts/utils/mpc/MpcCore.sol";
+import "hardhat/console.sol";
+
 contract WalletDistributor {
     // Mapping from owner to (sub-wallet => percentage)
     mapping(address => mapping(address => uint256)) private distributions;
@@ -12,10 +16,17 @@ contract WalletDistributor {
     mapping(address => uint256) private totalPercentage;
 
     // owner => amount to share
-    mapping(address => uint256) private amountToShare;
+    mapping(address => utUint64) private amountToShare;
 
     // owner => distribution time (UNIX timestamp)
     mapping(address => uint256) private distributionTimestamp;
+
+
+    constructor(){
+        gtUint64 gtZero = MpcCore.setPublic64(0);
+        amountToShare[msg.sender] = MpcCore.offBoardCombined(gtZero, msg.sender); 
+
+    }
 
     // Set percentage distribution for sub-wallets
     function setDistribution(address wallet, uint256 percentage) public {
@@ -36,9 +47,16 @@ contract WalletDistributor {
 }
 
     // Owner sets the amount they want to share
-    function setAmountToShare() external payable {
+    function setAmountToShare(itUint64 calldata value) external payable {
         require(msg.value > 0, "You must send some Ether");
-        amountToShare[msg.sender] += msg.value;
+        gtUint64 value_ = MpcCore.validateCiphertext(value);
+        gtUint64 sum_ = MpcCore.onBoard(amountToShare[msg.sender].ciphertext);
+
+        sum_ = MpcCore.add(sum_, value_);
+
+        amountToShare[msg.sender] = MpcCore.offBoardCombined(sum_, msg.sender);
+
+       // amountToShare[msg.sender] += msg.value;
     }
 
     // Owner sets the future time when distribution is allowed
@@ -52,7 +70,12 @@ contract WalletDistributor {
     // Distribute funds if conditions are met
     function distribute() public {
         address owner = msg.sender;
-        uint256 total = amountToShare[owner];
+        gtUint64 sum_ = MpcCore.onBoard(amountToShare[owner].ciphertext);
+        uint64 oya = MpcCore.decrypt(sum_);
+        
+        //uint256 total = amountToShare[owner];
+        uint256 total = uint256(oya);
+        console.log("Total to Share:", total);
         require(total > 0, "No amount to distribute");
         require(totalPercentage[owner] == 100, "Total percentage must be 100%");
         require(distributionTimestamp[owner] != 0, "Distribution time not set");
@@ -67,7 +90,9 @@ contract WalletDistributor {
         }
 
         // Reset
-        amountToShare[owner] = 0;
+        gtUint64 gtZero = MpcCore.setPublic64(0);
+        amountToShare[msg.sender] = MpcCore.offBoardCombined(gtZero, msg.sender);
+        //amountToShare[owner] = 0;
         distributionTimestamp[owner] = 0;
     }
 
@@ -76,6 +101,10 @@ contract WalletDistributor {
         address owner = msg.sender;
         return subWallets[owner];
     }
+
+    function getMyAmountToShare() external view returns (ctUint64) {
+    return amountToShare[msg.sender].userCiphertext;
+}
 
     // Remove a sub-wallet and update totals
     function removeWallet(address owner, address wallet) public {
