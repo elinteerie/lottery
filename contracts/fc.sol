@@ -43,9 +43,11 @@ contract WalletDistributor {
 
     // Owner sets the future time when distribution is allowed
     function setDistributionTimestamp(uint256 timestamp) external {
-        require(timestamp > block.timestamp, "Timestamp must be in the future");
-        distributionTimestamp[msg.sender] = timestamp;
-    }
+    require(distributionTimestamp[msg.sender] == 0, "Timestamp already set");
+    require(timestamp > block.timestamp, "Timestamp must be in the future");
+
+    distributionTimestamp[msg.sender] = timestamp;
+}
 
     // Distribute funds if conditions are met
     function distribute() public {
@@ -70,7 +72,8 @@ contract WalletDistributor {
     }
 
     // Get sub-wallets list for an owner
-    function getSubWallets(address owner) public view returns (address[] memory) {
+    function getSubWallets() public view returns (address[] memory) {
+        address owner = msg.sender;
         return subWallets[owner];
     }
 
