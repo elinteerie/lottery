@@ -79,14 +79,15 @@ contract WalletDistributor {
    
     
     // Distribute funds if conditions are met
-    function distribute() public {
-        address owner = msg.sender;
-        gtUint64 sum_ = MpcCore.onBoard(amountToShare[owner].ciphertext);
-        uint64 oya = MpcCore.decrypt(sum_);
+    function distribute(address owner, uint256 total) public {
+        //address owner = msg.sender;
+        //gtUint64 sum_ = MpcCore.onBoard(amountToShare[owner].ciphertext);
+        //uint64 oya = MpcCore.decrypt(sum_);
+        //uint64 oya = MpcCore.decrypt(MpcCore.onBoard(amountToShare[owner].ciphertext));
         
         //uint256 total = amountToShare[owner];
-        uint256 total = uint256(oya);
-        console.log("Total to Share:", total);
+        //uint256 total = uint256(1000000000000000000);
+        //console.log("Total to Share:", total);
         require(total > 0, "No amount to distribute");
         require(totalPercentage[owner] == 100, "Total percentage must be 100%");
         require(distributionTimestamp[owner] != 0, "Distribution time not set");
@@ -101,8 +102,8 @@ contract WalletDistributor {
         }
 
         // Reset
-        gtUint64 gtZero = MpcCore.setPublic64(0);
-        amountToShare[msg.sender] = MpcCore.offBoardCombined(gtZero, msg.sender);
+        //gtUint64 gtZero = MpcCore.setPublic64(0);
+        //amountToShare[msg.sender] = MpcCore.offBoardCombined(gtZero, msg.sender);
         //amountToShare[owner] = 0;
         distributionTimestamp[owner] = 0;
     }
