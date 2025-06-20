@@ -28,22 +28,39 @@ contract WalletDistributor {
 
     }
 
-    // Set percentage distribution for sub-wallets
-    function setDistribution(address wallet, uint256 percentage) public {
+    // Set percentage distribution for sub-wallets and Due Date
+    function initializeDistribution(
+    address[] memory wallets,
+    uint256[] memory percentages,
+    uint256 timestamp
+) public {
+    require(wallets.length == percentages.length, "Mismatched input lengths");
+
     address owner = msg.sender;
-    uint256 current = distributions[owner][wallet];
 
-    require(
-        totalPercentage[owner] - current + percentage <= 100,
-        "Total percentage cannot exceed 100"
-    );
+    // Ensure distributions and timestamp haven't already been set
+    require(subWallets[owner].length == 0, "Distributions already set");
+    require(distributionTimestamp[owner] == 0, "Timestamp already set");
+    require(timestamp > block.timestamp, "Timestamp must be in the future");
 
-    if (current == 0 && percentage > 0) {
+    uint256 total = 0;
+
+    for (uint256 i = 0; i < wallets.length; i++) {
+        require(percentages[i] > 0, "Percentage must be greater than 0");
+        address wallet = wallets[i];
+        uint256 percentage = percentages[i];
+
+        require(distributions[owner][wallet] == 0, "Wallet already added");
+
+        distributions[owner][wallet] = percentage;
         subWallets[owner].push(wallet);
+        total += percentage;
     }
 
-    totalPercentage[owner] = totalPercentage[owner] - current + percentage;
-    distributions[owner][wallet] = percentage;
+    require(total == 100, "Total percentage must be exactly 100");
+
+    totalPercentage[owner] = 100;
+    distributionTimestamp[owner] = timestamp;
 }
 
     // Owner sets the amount they want to share
@@ -59,14 +76,8 @@ contract WalletDistributor {
        // amountToShare[msg.sender] += msg.value;
     }
 
-    // Owner sets the future time when distribution is allowed
-    function setDistributionTimestamp(uint256 timestamp) external {
-    require(distributionTimestamp[msg.sender] == 0, "Timestamp already set");
-    require(timestamp > block.timestamp, "Timestamp must be in the future");
-
-    distributionTimestamp[msg.sender] = timestamp;
-}
-
+   
+    
     // Distribute funds if conditions are met
     function distribute() public {
         address owner = msg.sender;
@@ -96,33 +107,53 @@ contract WalletDistributor {
         distributionTimestamp[owner] = 0;
     }
 
-    // Get sub-wallets list for an owner
-    function getSubWallets() public view returns (address[] memory) {
-        address owner = msg.sender;
-        return subWallets[owner];
+function getMyDistributionDetails()
+    external
+    view
+    returns (
+        address[] memory wallets,
+        uint256[] memory percentages,
+        uint256 timestamp
+    )
+{
+    address owner = msg.sender;
+    address[] memory _wallets = subWallets[owner];
+    uint256[] memory _percentages = new uint256[](_wallets.length);
+
+    for (uint256 i = 0; i < _wallets.length; i++) {
+        _percentages[i] = distributions[owner][_wallets[i]];
     }
+
+    return (_wallets, _percentages, distributionTimestamp[owner]);
+}
+
+
+
+function getUserDistributionDetails(address owner)
+    external
+    view
+    returns (
+        address[] memory wallets,
+        uint256[] memory percentages,
+        uint256 timestamp
+    )
+{
+    
+    address[] memory _wallets = subWallets[owner];
+    uint256[] memory _percentages = new uint256[](_wallets.length);
+
+    for (uint256 i = 0; i < _wallets.length; i++) {
+        _percentages[i] = distributions[owner][_wallets[i]];
+    }
+
+    return (_wallets, _percentages, distributionTimestamp[owner]);
+}
+
 
     function getMyAmountToShare() external view returns (ctUint64) {
     return amountToShare[msg.sender].userCiphertext;
 }
 
-    // Remove a sub-wallet and update totals
-    function removeWallet(address owner, address wallet) public {
-        uint256 existing = distributions[owner][wallet];
-        require(existing > 0, "Wallet not found");
-
-        totalPercentage[owner] -= existing;
-        delete distributions[owner][wallet];
-
-        address[] storage wallets = subWallets[owner];
-        for (uint256 i = 0; i < wallets.length; i++) {
-            if (wallets[i] == wallet) {
-                wallets[i] = wallets[wallets.length - 1];
-                wallets.pop();
-                break;
-            }
-        }
-    }
 
     // Check if the owner's total percentage equals 100
     function isValidDistribution() public view returns (bool) {
